@@ -39,6 +39,12 @@ RUN set -ex; \
 	podman --help >/dev/null; \
 	! ldd /usr/local/bin/podman
 RUN set -ex; \
+	export CGO_ENABLED=$PODMAN_CGO; \
+	make bin/quadlet LDFLAGS_PODMAN="-s -w -extldflags '-static'" BUILDTAGS='${PODMAN_BUILDTAGS}'; \
+	mv bin/quadlet /usr/local/bin/quadlet; \
+	quadlet --help >/dev/null; \
+	! ldd /usr/local/bin/quadlet
+RUN set -ex; \
 	CGO_ENABLED=0 make bin/rootlessport BUILDFLAGS=" -mod=vendor -ldflags=\"-s -w -extldflags '-static'\""; \
 	mkdir -p /usr/local/lib/podman; \
 	mv bin/rootlessport /usr/local/lib/podman/rootlessport; \
@@ -138,6 +144,7 @@ RUN apk add --no-cache tzdata ca-certificates
 COPY --from=conmon /conmon/bin/conmon /usr/local/lib/podman/conmon
 COPY --from=podman /usr/local/lib/podman/rootlessport /usr/local/lib/podman/rootlessport
 COPY --from=podman /usr/local/bin/podman /usr/local/bin/podman
+COPY --from=podman /usr/local/bin/quadlet /usr/local/bin/quadlet
 COPY conf/containers /etc/containers
 RUN set -ex; \
 	adduser -D podman -h /podman -u 1000; \
@@ -149,6 +156,7 @@ RUN set -ex; \
 	chown -R podman:podman /podman; \
 	mkdir -m1777 /.local /.config /.cache; \
 	podman --help >/dev/null; \
+	quadlet --help >/dev/null; \
 	/usr/local/lib/podman/conmon --help >/dev/null
 ENV _CONTAINERS_USERNS_CONFIGURED=""
 
